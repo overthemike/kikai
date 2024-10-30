@@ -1,45 +1,54 @@
 // Symbols for internal state
-const $flag = Symbol('flag')
+export const $flag = Symbol('flag')
 const $meta = Symbol('meta')
 const $allowedStates = Symbol('allowedStates')
 const $stateName = Symbol('stateName')
+const $debug = Symbol('debug')
+const $history = Symbol('history')
 
-type StateData = Record<string, any>
-type Payload = Record<string, any>
+type StateData = Record<string, unknown>
+type Payload = Record<string, unknown> | unknown
 
 // Handler for state events
 type StateHandler<TData = StateData, TPayload = Payload> = (
   data: TData,
   payload: TPayload
-) => TData | (() => string)
+) => TData
 
 // Event handlers for a state
-interface StateHandlers<TData = StateData> {
+interface StateHandlers<TData extends StateData> {
   [eventName: string]: StateHandler<TData>
 }
 
-interface StateConfig {
-  initial?: StateData
-  validate?: (data: StateData) => boolean
-  on?: StateHandlers
+interface StateConfig<TData extends StateData> {
+  initial?: TData
+  validate?: <TData>(data: TData) => boolean
+  on?: StateHandlers<TData>
 }
 
-interface StateMeta {
-  data: StateData | null
-  validate?: (data: StateData) => boolean
-  on?: StateHandlers
-  allows?: StateFunction
-  to?: StateFunction
+interface StateMeta<TData extends StateData> {
+  data: TData
+  validate?: <TData>(data: TData) => boolean
+  on?: StateHandlers<TData>
 }
 
-type StateFunction = ((data?: StateData) => any) & {
+type StateFunction<TData extends StateData = StateData> = ((
+  data?: TData
+) => unknown) & {
   [$flag]: bigint
-  [$meta]: StateMeta
+  [$meta]: StateMeta<TData>
   [$allowedStates]?: bigint
   [$stateName]?: string
-  allows?: StateFunction
-  to?: StateFunction
-}
+  [$debug]?: (key: string, value: unknown) => void
+  [$history]?: debugHistory
+  allows?: StateFunction | bigint
+  to?: StateFunction | bigint
+  debug?: boolean
+  getData: () => StateData
+  fire: (eventName: string, payload?: Payload) => TData
+  set: <K extends keyof TData>(prop: K, value: TData[K]) => void
+  [Symbol.toPrimitive]: (hint: string) => bigint | string
+} & bigint
 
 let nextFlag = 1n
 const getNextFlag = () => {
@@ -48,38 +57,58 @@ const getNextFlag = () => {
   return flag
 }
 
-let currentState: StateFunction | null = null
+let currentState: StateFunction = (() => {}) as StateFunction
 const transitionHistory: StateFunction[] = []
+type debugHistory = {
+  log: (key: string, value: unknown) => void
+  events: Record<string, unknown>
+}
 
-const state = (config?: StateConfig) => {
+const state = <TData extends StateData = StateData>(
+  config?: StateConfig<TData>
+) => {
   const flag = getNextFlag()
 
-  const instance = ((data?: StateData) => {
+  const instance = ((data?: TData) => {
     if (data === undefined) return true
 
     if (config?.validate && !config.validate(data)) {
       throw new Error(`Invalid data: ${data}`)
     }
 
-    return instance
-  }) as StateFunction
+    if (instance[$meta].data !== undefined) {
+      instance[$meta].data = data
+    }
 
-  ;(instance as any)[Symbol.toPrimitive] = (hint: string) => {
+    return instance
+  }) as StateFunction<TData>
+
+  instance[$meta] = {
+    data: {} as TData, // Initialize with empty object
+    validate: config?.validate || ((_) => true),
+    on: config?.on || {}
+  }
+
+  instance[Symbol.toPrimitive] = (hint: string) => {
     if (hint === 'number') return flag
     return instance.toString()
   }
 
-  instance[$meta] = {
-    data: config?.initial || null,
-    validate: config?.validate,
-    on: config?.on
+  const meta = instance[$meta]
+
+  if (config?.initial) {
+    meta.data = config.initial
+  }
+
+  if (config?.validate) {
+    meta.validate = config.validate
+  }
+
+  if (config?.on) {
+    meta.on = config.on
   }
 
   instance[$flag] = flag
-
-  // Check transition
-  const prevState = currentState as StateFunction
-  currentState = instance
 
   const instanceProxy = new Proxy(instance, {
     set(target, prop, value) {
@@ -91,17 +120,17 @@ const state = (config?: StateConfig) => {
   })
 
   Object.defineProperties(instanceProxy, {
-    name: {
-      enumerable: true,
-      configurable: false,
-      writable: false
-    },
     [$flag]: {
       enumerable: false,
       configurable: false,
       writable: false
     },
     [$meta]: {
+      enumerable: true,
+      configurable: false,
+      writable: true
+    },
+    [$debug]: {
       enumerable: false,
       configurable: false,
       writable: false
@@ -129,6 +158,30 @@ const state = (config?: StateConfig) => {
     }
   })
 
+  instance.getData = () => instance[$meta].data || {}
+
+  // Fire method with correct generic constraint
+  instance.fire = (eventName: string, payload?: Payload) => {
+    const handler = instance[$meta]?.on?.[eventName]
+    if (typeof handler === 'function') {
+      const data = instance[$meta].data
+      if (data !== null) {
+        return handler(instance[$meta].data, payload || {})
+      }
+    }
+    throw new Error(`No handler for event ${eventName}`)
+  }
+
+  instance.set = <K extends keyof TData>(prop: K, value: TData[K]) => {
+    if (instance[$meta].data) {
+      instance[$meta].data[prop] = value
+    }
+  }
+
+  // Check transition
+  const prevState = currentState as StateFunction<TData>
+  currentState = instance as StateFunction<StateData>
+
   if (prevState && prevState !== null) {
     const allowedStates = prevState[$allowedStates]
     // Make sure we're dealing with bigints
@@ -152,14 +205,49 @@ const statesProxy = new Proxy<Record<string, StateFunction>>(
   {
     get: (target, prop: string) => {
       if (!(prop in target)) {
-        const fn = state()
-        target[prop] = fn
-        Object.defineProperty(fn, $stateName, { value: prop })
+        // Create function that acts as both state and state creator
+        const stateFn = ((config?: StateConfig<StateData>) => {
+          if (config) {
+            const fn = state(config)
+            Object.defineProperty(fn, $stateName, { value: prop })
+            target[prop] = fn
+            return fn
+          }
+          const fn = state()
+          Object.defineProperty(fn, $stateName, { value: prop })
+          target[prop] = fn
+          return fn
+        }) as unknown as StateFunction
+
+        // Initialize with base state
+        const baseState = state()
+        Object.defineProperty(baseState, $stateName, { value: prop })
+        Object.assign(stateFn, baseState)
+        target[prop] = stateFn
+
+        return stateFn
       }
       return target[prop]
     }
   }
 )
+
+// const statesProxy = new Proxy<Record<string, StateFunction>>(
+//   {},
+//   {
+//     get: (target, prop: string) => {
+//       if (!(prop in target)) {
+//         return (config?: StateConfig<any>) => {
+//           const fn = state(config)
+//           Object.defineProperty(fn, $stateName, { value: prop })
+//           target[prop] = fn
+//           return fn
+//         }
+//       }
+//       return target[prop]
+//     }
+//   }
+// )
 
 const $ = statesProxy
 
