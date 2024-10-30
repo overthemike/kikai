@@ -4,7 +4,7 @@
   "description": "Simple state machines",
   "author": "Michael Sweeney <overthemike@gmail.com>",
   "homepage": "https://github.com/overthemike/kikai",
-  "repository": "github:overthemike/kikai",
+  "repository": "git+github:overthemike/kikai",
   "license": "MIT",
   "keywords": [
     "vite",
