@@ -1,22 +1,46 @@
-import $, { $flag } from './src/core/state'
+import $, { state } from './src/core/state'
 import { inspect } from 'node:util'
 
-$.On({
-  initial: { foo: 'bar' },
-  on: {
-    flip: (data) => {
-      console.log('Flipped', data)
-      return data
-    }
-  }
+// $.On({
+//   initial: { foo: 'bar' },
+//   on: {
+//     flip: (data) => {
+//       console.log('Flipped', data)
+//       return data
+//     }
+//   }
+// })
+
+// // Define possible states and their allowed transitions
+// $.On.allows = $.Off | $.Foo
+// $.Foo.allows = $.Off | $.On
+// $.Off.allows = $.On
+
+const On = state({
+  initial: { foo: 'bar' }
 })
+const Off = state()
 
-// Define possible states and their allowed transitions
-$.On.allows = $.Off | $.Foo
-$.Foo.allows = $.Off | $.On
-$.Off.allows = $.On
+On.allows = Off
+Off.allows = Off
 
-console.log($.Off | $.Foo, $.On.allows)
+try {
+  console.log(On.getData())
+  Off({ foo: 'bat' })
+  console.log(On.getData())
+
+  console.log('Started in Off state')
+  On({ foo: 'cat' })
+  console.log(On.getData())
+  console.log('Switched to On state')
+  Off({ foo: 'dat' })
+  console.log(On.getData())
+  console.log('Switched back to Off state')
+} catch (err) {
+  console.error(`Error: ${err.message}`)
+}
+
+// console.log($.Off | $.Foo, $.On.allows)
 // // Try some transitions
 // try {
 //   // Start in Off state

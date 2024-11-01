@@ -1,75 +1,94 @@
-```markdown
 # Kikai
-A lightweight, type-safe state machine library with intuitive syntax, minimal boilerplate, and a tiny footprint.
+A lightweight and type-safe finite state machine library with intuitive syntax, minimal boilerplate, and a tiny footprint.
 This is a brand new project, so please feel free to offer suggestions and feedback! Far less complex than XState,
 but just as powerful.
 
 ## Installation
-
 ```bash
 npm install kikai
 ```
+## Why Kikai?
+
+The most popular state machine library out there is [XState](https://xstate.js.org/). While it is a great library, it is also quite large, has a steep learning curve, and it requires a lot of boilerplate to get started. Everything is done by configuration, which gets unwieldy quickly. Kikai is designed to be as simple as possible, with a minimal API and minimal boilerplate.
+
+Kikai works by utilizing the ability to coerce an object or a function to a primitive type via `Symbol.toPrimitive` (also toString, valueOf, and toJSON), paired with old fashioned bitwise operations (primarily the `|` operator). There is no need to udnerstand how bitwise operations work, so don't let that scare yo off. The syntax is something you're already used to if you use typescript.
+
+Kikai also attempts to get rid of unnecessary bloat such as `actors` and `guards` by simply letting you use regular functions to define your states and transitions. This makes it easier to reason about your code and makes it more intuitive.
 
 ## Basic Usage
-
 ```typescript
-import $ from 'state-machine'
+import { state } from 'kikai'
 
-// Define states and transitions
-// $ is a proxy that will create your state when you create a new property
-// `On` and `Off` are state functions that utilize the ability to in javascript
-// to coerce a an object or a function to a primitive type via `Symbol.toPrimitive`
-// (also toString, valueOf, and toJSON).
-// `allows` is where you define the valid transitions for a state. You simply
-// use the bitwise OR ( | ) operator to define the valid transitions for a state,
-// similar to how you define a union type in typescript.
+// Traffic light
+const Red = state() // you don't have to pass any configuration if it isn't needed
+const FlashingYellow = state()
+const Yellow = state()
+const Green = state()
 
-// Define allowed transitions - no need to define the states ahead of time
-// They are defined as you use them
-$.state1.allows = $.state2 | $.state3
-$.state2.allows = $.state1 | $.state3
-// $.state3 doesn't transition to anything, so no need to define it
+// Define each state's allowed transitions by using the `allows` or `to` property along with the bitwise OR operator
 
-// Circular transitions are allowed
-$.On.allows = $.Off
-$.Off.allows = $.On
+// The "Red" state allows transitioning into either the "FlashingYellow" or "Green" states.
+Red.allows = FlashingYellow | Green
+// The "FlashingYellow" state allows transitioning into either the "Red" or "Yellow" states.
+FlassingYellow.allows = Red | Yellow
+// The "Yellow" state only allows transitioning into the "Red" state.
+Yellow.allows = Red
+// The "Green" state allows transitioning into either the "Yellow" or "FlashingYellow" states.
+Green.allows = Yellow | FlashingYellow
 
-// Use states
-$.Off()  // Start in Off state
-$.On()   // Transition to On state
-$.Off()  // Transition back to Off
+// Initial State Transition
+Red()
+
+// transition to Green
+Green()
+
+// transition to Yellow
+Yellow()
+
+// transition to a non-allowed state throws an error
+Green() // Error: Invalid transition from Green to FlashingYellow
+
+```
+The above is the most basic example of transitioning between states. States are simply functions.
+
+
+## $ shorthand
+
+When your application requires a lot of different states, it can be cumbersome and repetetive to define a new variable for each one. `$` attempts to simplify this by allowing you to define your states simply by adding a new property to the `$` object. It will automatically create a state function for you as soon as you access that property. `$` is simply a proxy with a `get` trap that will create a state function when you access a property that doesn't exist, or return the existing state function if it does.
+
+Same example from above, but using the `$` shorthand:
+```typescript
+import $ from 'kikai'
+
+$.Red.allows = $.FlashingYellow | $.Green
+$.FlashingYellow.allows = $.Red | $.Yellow
+$.Yellow.allows = $.Red
+$.Green.allows = $.Yellow | $.FlashingYellow
+
+$.Red()
+$.Green()
+$.Yellow()
+$.Green() // Error: Invalid transition from Green to FlashingYellow
 ```
 
 ## States with Data and Events
+
+Each state function has data and events associated with it if you want it to. You can optionally pass in a configuration object when you create a state function.
+
 ```typescript
-// Define state with data and event handlers
-$.Form({
-  initial: {
-    values: {},
-    touched: new Set<string>()
-  },
-  validate: (data) => {
-    // Validate data shape
-    return true
-  },
+const Red = state({
+  initial: { color: 'red' },
+  validate: (data) => data.color === 'red',
   on: {
-    submit: (data, payload) => {
-      // Handle submit event
-      return $.Loading(data)
-    },
     change: (data, payload) => {
-      // Update form data
-      return {
-        ...data,
-        values: { ...data.values, [payload.field]: payload.value },
-        touched: new Set([...data.touched, payload.field])
-      }
+      return { ...data, color: payload.color }
     }
   }
 })
+// if `validate` is defined, it will be called on the data you pass in to your state function. You define your  own validation in the `validate` property of the configuration object.
 
-// Fire events
-$.Form.fire('change', { field: 'email', value: 'test@example.com' })
+// `fire` will trigger whatever event you pass in. You defined your own events in the `on` property of the configuration object.
+Red.fire('change', { color: 'blue' })
 ```
 
 ## Complex State Flows
@@ -111,7 +130,9 @@ LoadingState.fire('progress', 50)
 ## API
 
 ### State Creation
+- `const [StateName] = state()` - Create a simple state
 - `$.[StateName]` - Create a simple state
+- `const [StateName] = state({...config})` - Create a configured state
 - `$.[StateName]({...config})` - Create configured state
 
 ### State Configuration
@@ -126,10 +147,13 @@ interface StateConfig<TData> {
 ```
 
 ### State Functions
-- `allows` - Define valid transitions
+- `allows` or `to` - Define valid transitions
 - `fire(eventName, payload?)` - Trigger event
 - `getData()` - Get current state data
 - `set(prop, value)` - Update state data
+
+## What about Machines?
+Machines are actually not necessary. State can handle themselves. However, there is a work in progress that will allow you to combine multiple state functions into an optional "machine" import that will combine multiple state functions together as one "machine".
 
 ## License
 MIT

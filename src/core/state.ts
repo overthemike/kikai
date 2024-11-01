@@ -1,70 +1,63 @@
-// Symbols for internal state
-export const $flag = Symbol('flag')
-const $meta = Symbol('meta')
-const $allowedStates = Symbol('allowedStates')
-const $stateName = Symbol('stateName')
-const $debug = Symbol('debug')
-const $history = Symbol('history')
-
+// Types
 type StateData = Record<string, unknown>
 type Payload = Record<string, unknown> | unknown
 
-// Handler for state events
 type StateHandler<TData = StateData, TPayload = Payload> = (
   data: TData,
   payload: TPayload
 ) => TData
 
-// Event handlers for a state
-interface StateHandlers<TData extends StateData> {
+interface StateHandlers<TData extends StateData = StateData> {
   [eventName: string]: StateHandler<TData>
 }
 
-interface StateConfig<TData extends StateData> {
+interface StateConfig<TData extends StateData = StateData> {
   initial?: TData
   validate?: <TData>(data: TData) => boolean
   on?: StateHandlers<TData>
 }
 
-interface StateMeta<TData extends StateData> {
+interface StateMeta<TData extends StateData = StateData> {
   data: TData
   validate?: <TData>(data: TData) => boolean
   on?: StateHandlers<TData>
 }
 
+type StateMetaData<TData extends StateData = StateData> = {
+  flag: bigint
+  meta: StateMeta<TData>
+  allowedStates?: bigint
+  stateName?: string
+  debug?: (key: string, value: unknown) => void
+  history?: {
+    log: (key: string, value: unknown) => void
+    events: Record<string, unknown>
+  }
+}
+
 type StateFunction<TData extends StateData = StateData> = ((
   data?: TData
 ) => unknown) & {
-  [$flag]: bigint
-  [$meta]: StateMeta<TData>
-  [$allowedStates]?: bigint
-  [$stateName]?: string
-  [$debug]?: (key: string, value: unknown) => void
-  [$history]?: debugHistory
-  allows?: StateFunction | bigint
-  to?: StateFunction | bigint
-  debug?: boolean
-  getData: () => StateData
+  getData: () => TData
   fire: (eventName: string, payload?: Payload) => TData
   set: <K extends keyof TData>(prop: K, value: TData[K]) => void
+  allows?: StateFunction
+  to?: StateFunction
   [Symbol.toPrimitive]: (hint: string) => bigint | string
-} & bigint
+}
 
+// Internal state tracking
+const MetaMap = new WeakMap<StateFunction<any>, StateMetaData<any>>()
 let nextFlag = 1n
+let currentState: StateFunction<any> | null = null
+
 const getNextFlag = () => {
   const flag = nextFlag
   nextFlag <<= 1n
   return flag
 }
 
-let currentState: StateFunction = (() => {}) as StateFunction
-const transitionHistory: StateFunction[] = []
-type debugHistory = {
-  log: (key: string, value: unknown) => void
-  events: Record<string, unknown>
-}
-
-const state = <TData extends StateData = StateData>(
+export const state = <TData extends StateData = StateData>(
   config?: StateConfig<TData>
 ) => {
   const flag = getNextFlag()
@@ -72,123 +65,97 @@ const state = <TData extends StateData = StateData>(
   const instance = ((data?: TData) => {
     if (data === undefined) return true
 
-    if (config?.validate && !config.validate(data)) {
+    const metaData = MetaMap.get(instance)!
+    if (metaData.meta.validate && !metaData.meta.validate(data)) {
       throw new Error(`Invalid data: ${data}`)
     }
 
-    if (instance[$meta].data !== undefined) {
-      instance[$meta].data = data
+    if (metaData.meta.data !== undefined) {
+      metaData.meta.data = data
     }
 
     return instance
   }) as StateFunction<TData>
 
-  instance[$meta] = {
-    data: {} as TData, // Initialize with empty object
-    validate: config?.validate || ((_) => true),
-    on: config?.on || {}
-  }
-
-  instance[Symbol.toPrimitive] = (hint: string) => {
-    if (hint === 'number') return flag
-    return instance.toString()
-  }
-
-  const meta = instance[$meta]
-
-  if (config?.initial) {
-    meta.data = config.initial
-  }
-
-  if (config?.validate) {
-    meta.validate = config.validate
-  }
-
-  if (config?.on) {
-    meta.on = config.on
-  }
-
-  instance[$flag] = flag
-
-  const instanceProxy = new Proxy(instance, {
-    set(target, prop, value) {
-      if (prop === 'to' || prop === 'allows') {
-        target[$allowedStates] = BigInt(value)
-      }
-      return true
+  // Initialize metadata
+  MetaMap.set(instance, {
+    flag,
+    meta: {
+      data: {} as TData,
+      validate: config?.validate || ((_) => true),
+      on: config?.on || {}
     }
   })
 
-  Object.defineProperties(instanceProxy, {
-    [$flag]: {
-      enumerable: false,
-      configurable: false,
-      writable: false
-    },
-    [$meta]: {
-      enumerable: true,
-      configurable: false,
-      writable: true
-    },
-    [$debug]: {
-      enumerable: false,
-      configurable: false,
-      writable: false
-    },
-    [$stateName]: {
-      enumerable: true,
-      configurable: false,
-      writable: true
-    },
-    allows: {
-      get() {
-        return this[$allowedStates]
-      },
-      set(value) {
-        this[$allowedStates] = BigInt(value)
-      }
-    },
-    to: {
-      get() {
-        return this[$allowedStates]
-      },
-      set(value) {
-        this[$allowedStates] = BigInt(value)
-      }
-    }
-  })
+  // Add methods
+  instance.getData = () => MetaMap.get(instance)!.meta.data
 
-  instance.getData = () => instance[$meta].data || {}
-
-  // Fire method with correct generic constraint
   instance.fire = (eventName: string, payload?: Payload) => {
-    const handler = instance[$meta]?.on?.[eventName]
+    const metaData = MetaMap.get(instance)!
+    const handler = metaData.meta.on?.[eventName]
     if (typeof handler === 'function') {
-      const data = instance[$meta].data
-      if (data !== null) {
-        return handler(instance[$meta].data, payload || {})
-      }
+      return handler(metaData.meta.data, payload || {})
     }
     throw new Error(`No handler for event ${eventName}`)
   }
 
   instance.set = <K extends keyof TData>(prop: K, value: TData[K]) => {
-    if (instance[$meta].data) {
-      instance[$meta].data[prop] = value
+    const metaData = MetaMap.get(instance)!
+    if (metaData.meta.data) {
+      metaData.meta.data[prop] = value
     }
   }
 
-  // Check transition
-  const prevState = currentState as StateFunction<TData>
-  currentState = instance as StateFunction<StateData>
+  instance[Symbol.toPrimitive] = (hint: string) => {
+    const metaData = MetaMap.get(instance)!
+    if (hint === 'number') return metaData.flag
+    return instance.toString()
+  }
 
-  if (prevState && prevState !== null) {
-    const allowedStates = prevState[$allowedStates]
-    // Make sure we're dealing with bigints
-    if (allowedStates !== undefined) {
-      if (!(BigInt(allowedStates) & BigInt(flag))) {
+  // Update metadata if config provided
+  if (config) {
+    const metaData = MetaMap.get(instance)!
+    if (config.initial) {
+      metaData.meta.data = config.initial
+    }
+    if (config.validate) {
+      metaData.meta.validate = config.validate
+    }
+    if (config.on) {
+      metaData.meta.on = config.on
+    }
+  }
+
+  // Create proxy
+  const instanceProxy = new Proxy(instance, {
+    get(target, prop) {
+      const metaData = MetaMap.get(target)!
+      if (prop === 'allows' || prop === 'to') {
+        return metaData.allowedStates
+      }
+      return Reflect.get(target, prop)
+    },
+    set(target, prop, value) {
+      const metaData = MetaMap.get(target)!
+      if (prop === 'allows' || prop === 'to') {
+        metaData.allowedStates = BigInt(value)
+      }
+      return true
+    }
+  })
+
+  // Check transition
+  const prevState = currentState
+  currentState = instanceProxy
+
+  if (prevState) {
+    const prevMetaData = MetaMap.get(prevState)
+    if (prevMetaData?.allowedStates !== undefined) {
+      if (!(prevMetaData.allowedStates & flag)) {
         throw new Error(
-          `Invalid transition from ${prevState[$stateName]} to ${instance[$stateName]}`
+          `Invalid transition from ${prevMetaData.stateName} to ${
+            MetaMap.get(instance)!.stateName
+          }`
         )
       }
     }
@@ -197,31 +164,23 @@ const state = <TData extends StateData = StateData>(
   return instanceProxy
 }
 
-/**
- * Helper proxy to easily create simple state functions
- */
 const statesProxy = new Proxy<Record<string, StateFunction>>(
   {},
   {
     get: (target, prop: string) => {
       if (!(prop in target)) {
-        // Create function that acts as both state and state creator
         const stateFn = ((config?: StateConfig<StateData>) => {
-          if (config) {
-            const fn = state(config)
-            Object.defineProperty(fn, $stateName, { value: prop })
-            target[prop] = fn
-            return fn
-          }
-          const fn = state()
-          Object.defineProperty(fn, $stateName, { value: prop })
+          const fn = state(config)
+          const metaData = MetaMap.get(fn)!
+          metaData.stateName = prop
           target[prop] = fn
           return fn
-        }) as unknown as StateFunction
+        }) as StateFunction
 
         // Initialize with base state
         const baseState = state()
-        Object.defineProperty(baseState, $stateName, { value: prop })
+        const baseMetaData = MetaMap.get(baseState)!
+        baseMetaData.stateName = prop
         Object.assign(stateFn, baseState)
         target[prop] = stateFn
 
@@ -232,23 +191,11 @@ const statesProxy = new Proxy<Record<string, StateFunction>>(
   }
 )
 
-// const statesProxy = new Proxy<Record<string, StateFunction>>(
-//   {},
-//   {
-//     get: (target, prop: string) => {
-//       if (!(prop in target)) {
-//         return (config?: StateConfig<any>) => {
-//           const fn = state(config)
-//           Object.defineProperty(fn, $stateName, { value: prop })
-//           target[prop] = fn
-//           return fn
-//         }
-//       }
-//       return target[prop]
-//     }
-//   }
-// )
+export default statesProxy
 
-const $ = statesProxy
-
-export default $
+// Helper to access metadata (if needed externally)
+export function getStateMetaData<TData extends StateData>(
+  state: StateFunction<TData>
+): StateMetaData<TData> | undefined {
+  return MetaMap.get(state)
+}
