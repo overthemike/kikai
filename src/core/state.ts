@@ -4,7 +4,7 @@ import type {
   Payload,
   StateMetaData,
   StateConfig
-} from './types/state'
+} from '../types/state'
 
 // Internal state tracking
 const MetaMap = new WeakMap<StateFunction<any>, StateMetaData<any>>()
