@@ -1,50 +1,10 @@
-// Types
-type StateData = Record<string, unknown>
-type Payload = Record<string, unknown> | unknown
-
-type StateHandler<TData = StateData, TPayload = Payload> = (
-  data: TData,
-  payload: TPayload
-) => TData
-
-interface StateHandlers<TData extends StateData = StateData> {
-  [eventName: string]: StateHandler<TData>
-}
-
-interface StateConfig<TData extends StateData = StateData> {
-  initial?: TData
-  validate?: <TData>(data: TData) => boolean
-  on?: StateHandlers<TData>
-}
-
-interface StateMeta<TData extends StateData = StateData> {
-  data: TData
-  validate?: <TData>(data: TData) => boolean
-  on?: StateHandlers<TData>
-}
-
-type StateMetaData<TData extends StateData = StateData> = {
-  flag: bigint
-  meta: StateMeta<TData>
-  allowedStates?: bigint
-  stateName?: string
-  debug?: (key: string, value: unknown) => void
-  history?: {
-    log: (key: string, value: unknown) => void
-    events: Record<string, unknown>
-  }
-}
-
-type StateFunction<TData extends StateData = StateData> = ((
-  data?: TData
-) => unknown) & {
-  getData: () => TData
-  fire: (eventName: string, payload?: Payload) => TData
-  set: <K extends keyof TData>(prop: K, value: TData[K]) => void
-  allows?: StateFunction
-  to?: StateFunction
-  [Symbol.toPrimitive]: (hint: string) => bigint | string
-}
+import type {
+  StateFunction,
+  StateData,
+  Payload,
+  StateMetaData,
+  StateConfig
+} from './types/state'
 
 // Internal state tracking
 const MetaMap = new WeakMap<StateFunction<any>, StateMetaData<any>>()
@@ -82,7 +42,7 @@ export const state = <TData extends StateData = StateData>(
     flag,
     meta: {
       data: {} as TData,
-      validate: config?.validate || ((_) => true),
+      validate: config?.validate || (() => true),
       on: config?.on || {}
     }
   })
