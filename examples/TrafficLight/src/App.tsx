@@ -13,15 +13,27 @@ const store = proxy<TrafficLightState>({
   timeInState: 0
 })
 
-// Define states and transitions
-$.red.allows = $.yellow
-$.yellow.allows = $.green
-$.green.allows = $.red
+const managedStore = $(store)
 
-// Add validation
-$.red.validate = (state: TrafficLightState) => state.color === 'red'
-$.yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
-$.green.validate = (state: TrafficLightState) => state.color === 'green'
+const red = $.red({
+  allows: yellow,
+  validate: (state: TrafficLightState) => state.color === 'red',
+  on: {
+    enter: () => {
+      managedStore.color = 'red'
+    }
+  }
+})
+const yellow = $.yellow
+const green = $.green
+
+red.allows = yellow
+yellow.allows = green
+green.allows = red
+
+red.validate = (state: TrafficLightState) => state.color === 'red'
+yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
+green.validate = (state: TrafficLightState) => state.color === 'green'
 
 $.red.on('enter', () => {
   managedStore.color = 'red'
@@ -34,9 +46,6 @@ $.yellow.on('enter', () => {
 $.green.on('enter', () => {
   managedStore.color = 'green'
 })
-
-// Wrap store with our state machine
-const managedStore = $(store)
 
 // Create the component
 export default function TrafficLight() {
