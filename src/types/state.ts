@@ -1,4 +1,4 @@
-import type { StateHandler } from './config'
+import type { Config, StateHandler } from './config'
 import type { EventHandler, EventOptions } from './event'
 
 export const NO_STATE = Symbol('no state')
@@ -22,5 +22,7 @@ export type StateNode = {
 
 export type StateGetter = {
   (store: any): any
+  configure: (config: Partial<Config>) => void
+} & {
   [key: string]: StateNode
 }
