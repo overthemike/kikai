@@ -1,4 +1,7 @@
 export { $ } from './core/state'
+export { valtioHandler } from './handlers/valtio'
+export { jotaiHandler } from './handlers/jotai'
+export { zustandHandler } from './handlers/zustand'
 export * from './types/config'
 export * from './types/event'
 export * from './types/state'
