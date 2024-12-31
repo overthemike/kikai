@@ -2,7 +2,8 @@ import { NO_STATE, StateNode, StateGetter } from '../types/state'
 import { StateHandler, Config } from '../types/config'
 import { EventInfo } from '../types/event'
 import { runEventHandlers } from './event'
-import { configOverrides } from './config'
+import { nanoid } from 'nanoid'
+import { valtioHandler } from '../handlers/valtio'
 
 const states = new Map<string, StateNode>()
 let currentFlag = 1n
@@ -119,3 +120,15 @@ function createState(stateName: string): StateNode {
 stateMetadata.set($, {
   currentState: NO_STATE
 })
+
+export const configOverrides = new WeakMap<object, Partial<Config>>()
+
+export const defaultConfig: Config = {
+  generateId: nanoid,
+  stateHandler: valtioHandler
+}
+
+export function getConfig<K extends keyof Config>(key: K): Config[K] {
+  const overrides = configOverrides.get($)!
+  return overrides[key] ?? defaultConfig[key]
+}
