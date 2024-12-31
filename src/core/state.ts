@@ -80,7 +80,7 @@ function createState(stateName: string): StateNode {
     const flag = getNextFlag()
 
     const node = Object.assign(
-      async (config?: StateConfig) => {
+      function (config?: StateConfig): StateNode | Promise<void> {
         if (config) {
           if (config.allows) node.allows = config.allows
           if (config.validate) node.validate = config.validate
@@ -90,37 +90,39 @@ function createState(stateName: string): StateNode {
               node.events.set(event, new Set([{ handler, options: {} }]))
             })
           }
-          return node as StateNode
+          return node
         }
 
-        const metadata = stateMetadata.get($)!
-        const prevState = metadata.currentState
+        return (async () => {
+          const metadata = stateMetadata.get($)!
+          const prevState = metadata.currentState
 
-        if (prevState !== NO_STATE && !(prevState.allows & flag)) {
-          throw new Error(
-            `Invalid transition from ${prevState.displayName} to ${stateName}`
-          )
-        }
-
-        const eventInfo: EventInfo = {
-          state: stateName,
-          currentState:
-            prevState === NO_STATE ? NO_STATE : prevState.displayName
-        }
-
-        if (prevState !== NO_STATE) {
-          const exitHandlers = prevState.events.get('exit')
-          if (exitHandlers?.size) {
-            await runEventHandlers(exitHandlers, eventInfo)
+          if (prevState !== NO_STATE && !(prevState.allows & flag)) {
+            throw new Error(
+              `Invalid transition from ${prevState.displayName} to ${stateName}`
+            )
           }
-        }
 
-        metadata.currentState = node
+          const eventInfo: EventInfo = {
+            state: stateName,
+            currentState:
+              prevState === NO_STATE ? NO_STATE : prevState.displayName
+          }
 
-        const enterHandlers = node.events.get('enter')
-        if (enterHandlers?.size) {
-          await runEventHandlers(enterHandlers, eventInfo)
-        }
+          if (prevState !== NO_STATE) {
+            const exitHandlers = prevState.events.get('exit')
+            if (exitHandlers?.size) {
+              await runEventHandlers(exitHandlers, eventInfo)
+            }
+          }
+
+          metadata.currentState = node
+
+          const enterHandlers = node.events.get('enter')
+          if (enterHandlers?.size) {
+            await runEventHandlers(enterHandlers, eventInfo)
+          }
+        })()
       },
       BigInt(0),
       {
