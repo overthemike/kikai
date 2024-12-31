@@ -30,3 +30,12 @@ export type StateGetter = {
 } & {
   [key: string]: StateNode
 }
+
+export type StateConfig<T = any> = {
+  allows?: StateNode | bigint
+  validate?: (state: T) => boolean
+  on?: {
+    [event: string]: (store?: any) => void | Promise<void>
+  }
+  use?: (handler: StateHandler) => void
+}

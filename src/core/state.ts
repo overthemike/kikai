@@ -1,4 +1,4 @@
-import { NO_STATE, StateNode, StateGetter } from '../types/state'
+import { NO_STATE, StateNode, StateGetter, StateConfig } from '../types/state'
 import { StateHandler, Config } from '../types/config'
 import { EventInfo } from '../types/event'
 import { runEventHandlers } from './event'
@@ -80,7 +80,19 @@ function createState(stateName: string): StateNode {
     const flag = getNextFlag()
 
     const node = Object.assign(
-      async () => {
+      async (config?: StateConfig) => {
+        if (config) {
+          if (config.allows) node.allows = config.allows
+          if (config.validate) node.validate = config.validate
+          if (config.use) node.use = config.use
+          if (config.on) {
+            Object.entries(config.on).forEach(([event, handler]) => {
+              node.events.set(event, new Set([{ handler, options: {} }]))
+            })
+          }
+          return
+        }
+
         const metadata = stateMetadata.get($)!
         const prevState = metadata.currentState
 
@@ -133,6 +145,21 @@ function createState(stateName: string): StateNode {
     return node
   }
   return states.get(stateName)!
+}
+
+export function state(name: string, config?: StateConfig): StateNode {
+  const node = createState(name)
+  if (config) {
+    if (config.allows) node.allows = config.allows
+    if (config.validate) node.validate = config.validate
+    if (config.use) node.use?.(config.use)
+    if (config.on) {
+      Object.entries(config.on).forEach(([event, handler]) => {
+        node.events.set(event, new Set([{ handler, options: {} }]))
+      })
+    }
+  }
+  return node
 }
 
 stateMetadata.set($, {
