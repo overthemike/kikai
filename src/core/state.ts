@@ -90,7 +90,7 @@ function createState(stateName: string): StateNode {
               node.events.set(event, new Set([{ handler, options: {} }]))
             })
           }
-          return
+          return node
         }
 
         const metadata = stateMetadata.get($)!
