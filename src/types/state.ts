@@ -4,7 +4,9 @@ import type { EventHandler, EventOptions } from './event'
 export const NO_STATE = Symbol('no state')
 
 export type StateNode = {
-  (config?: StateConfig): StateNode | Promise<void>
+  <T extends StateConfig | undefined>(
+    config?: T
+  ): T extends StateConfig ? StateNode : Promise<void>
   allows: bigint
   displayName: string
   validate?: (args: any) => boolean
