@@ -15,7 +15,7 @@ const store = proxy<TrafficLightState>({
 
 const managedStore = $(store)
 
-$.green({
+const green = $.green({
   allows: $.red,
   on: {
     enter: () => {
@@ -74,7 +74,7 @@ export default function TrafficLight() {
       if (snap.color === 'red') {
         $.yellow()
       } else if (snap.color === 'yellow') {
-        $.green()
+        green()
       } else if (snap.color === 'green') {
         $.red()
       }
