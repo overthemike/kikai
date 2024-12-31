@@ -14,15 +14,6 @@ const getNextFlag = () => {
   return flag
 }
 
-export const configOverrides = new WeakMap<object, Partial<Config>>()
-
-export const defaultConfig: Config = {
-  generateId: nanoid,
-  stateHandler: valtioHandler
-}
-
-const stateHandlers = new WeakMap<StateNode, StateHandler>()
-
 // Create a function as the base
 const stateGetterBase = function (store: any) {} as StateGetter
 
@@ -50,7 +41,7 @@ export const $ = new Proxy(stateGetterBase, {
     const handler =
       prevState !== NO_STATE && stateHandlers.has(prevState)
         ? stateHandlers.get(prevState)!
-        : metadata.handler
+        : getConfig('stateHandler')
 
     if (!handler) {
       throw new Error(
@@ -69,7 +60,6 @@ export const stateMetadata = new WeakMap<
   typeof $,
   {
     currentState: StateNode | typeof NO_STATE
-    handler?: StateHandler<any, any>
   }
 >()
 
@@ -133,6 +123,15 @@ export function getConfig<K extends keyof Config>(key: K): Config[K] {
 }
 
 stateMetadata.set($, {
-  currentState: NO_STATE,
-  handler: getConfig('stateHandler')
+  currentState: NO_STATE
 })
+
+export const configOverrides = new WeakMap<object, Partial<Config>>()
+
+export const defaultConfig: Config = {
+  generateId: nanoid,
+  stateHandler: valtioHandler
+}
+
+const stateHandlers = new WeakMap<StateNode | StateGetter, StateHandler>()
+stateHandlers.set($, getConfig('stateHandler') || valtioHandler)
