@@ -29,6 +29,10 @@ Object.defineProperty(stateGetterBase, 'configure', {
 
 export const $ = new Proxy(stateGetterBase, {
   get(target, prop: string | symbol): StateNode {
+    if (prop === 'configure') {
+      return target[prop as keyof typeof target]
+    }
+
     if (typeof prop === 'symbol') return undefined as any
     return createState(prop)
   },
