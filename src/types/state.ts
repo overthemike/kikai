@@ -1,46 +1,26 @@
-export type StateData = Record<string, unknown>
-export type Payload = Record<string, unknown> | unknown
+import type { StateHandler } from '@/types/config'
+import type { EventHandler, EventOptions } from '@/types/event'
 
-export type StateHandler<TData = StateData, TPayload = Payload> = (
-  data: TData,
-  payload: TPayload
-) => TData
+export const NO_STATE = Symbol('no state')
 
-export interface StateHandlers<TData extends StateData = StateData> {
-  [eventName: string]: StateHandler<TData>
-}
-
-export interface StateConfig<TData extends StateData = StateData> {
-  initial?: TData
-  validate?: <TData>(data: TData) => boolean
-  on?: StateHandlers<TData>
-}
-
-export interface StateMeta<TData extends StateData = StateData> {
-  data: TData
-  validate?: <TData>(data: TData) => boolean
-  on?: StateHandlers<TData>
-}
-
-export type StateMetaData<TData extends StateData = StateData> = {
+export type StateNode = {
+  (): Promise<void>
+  allows: bigint
+  displayName: string
+  validate?: (args: any) => boolean
+  events: Map<
+    string,
+    Set<{
+      handler: EventHandler
+      options: EventOptions
+    }>
+  >
+  use?: (handler: StateHandler) => void
   flag: bigint
-  meta: StateMeta<TData>
-  allowedStates?: bigint
-  stateName?: string
-  debug?: (key: string, value: unknown) => void
-  history?: {
-    log: (key: string, value: unknown) => void
-    events: Record<string, unknown>
-  }
-}
+  [Symbol.toPrimitive]: (hint: string) => bigint
+} & bigint
 
-export type StateFunction<TData extends StateData = StateData> = ((
-  data?: TData
-) => unknown) & {
-  getData: () => TData
-  fire: (eventName: string, payload?: Payload) => TData
-  set: <K extends keyof TData>(prop: K, value: TData[K]) => void
-  allows?: StateFunction
-  to?: StateFunction
-  [Symbol.toPrimitive]: (hint: string) => bigint | string
+export type StateGetter = {
+  (store: any): any
+  [key: string]: StateNode
 }
