@@ -50,7 +50,7 @@ export const $ = new Proxy(stateGetterBase, {
     const handler =
       prevState !== NO_STATE && stateHandlers.has(prevState)
         ? stateHandlers.get(prevState)!
-        : getConfig('stateHandler')
+        : metadata.handler
 
     if (!handler) {
       throw new Error(
