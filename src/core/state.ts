@@ -43,11 +43,11 @@ export const $ = new Proxy(stateGetterBase, {
     const handler =
       prevState !== NO_STATE && stateHandlers.has(prevState)
         ? stateHandlers.get(prevState)!
-        : metadata.handler
+        : getConfig('stateHandler')
 
     if (!handler) {
       throw new Error(
-        'No state handler set. Did you forget to call $({ handler: <handler>})?'
+        'No state handler set. Did you forget to call $.configure({ handler: <handler>})?'
       )
     }
 
@@ -120,11 +120,6 @@ function createState(stateName: string): StateNode {
   return states.get(stateName)!
 }
 
-// Initialize metadata
-stateMetadata.set($, {
-  currentState: NO_STATE
-})
-
 export const configOverrides = new WeakMap<object, Partial<Config>>()
 
 export const defaultConfig: Config = {
@@ -136,3 +131,8 @@ export function getConfig<K extends keyof Config>(key: K): Config[K] {
   const overrides = configOverrides.get($)!
   return overrides[key] ?? defaultConfig[key]
 }
+
+stateMetadata.set($, {
+  currentState: NO_STATE,
+  handler: getConfig('stateHandler')
+})

@@ -1,9 +1,7 @@
 import React from 'react'
 import { proxy, useSnapshot } from 'valtio'
 import { $ } from 'kikai'
-import { valtioHandler } from 'kikai'
-
-$.configure({ stateHandler: valtioHandler })
+// import { valtioHandler } from 'kikai'
 
 type TrafficLightState = {
   color: 'red' | 'yellow' | 'green'
