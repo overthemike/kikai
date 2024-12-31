@@ -17,6 +17,10 @@ export type StateNode = {
   >
   use?: (handler: StateHandler) => void
   flag: bigint
+  on: (
+    eventName: string,
+    handler: (store?: any) => void | Promise<void>
+  ) => void
   [Symbol.toPrimitive]: (hint: string) => bigint
 } & bigint
 

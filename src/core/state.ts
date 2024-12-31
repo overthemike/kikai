@@ -119,6 +119,12 @@ function createState(stateName: string): StateNode {
           stateHandlers.set(node, handler)
         },
         flag,
+        on(eventName: string, handler: StateHandler) {
+          if (!node.events.has(eventName)) {
+            node.events.set(eventName, new Set())
+          }
+          node.events.get(eventName)!.add({ handler, options: {} })
+        },
         [Symbol.toPrimitive]: () => flag
       }
     ) as StateNode

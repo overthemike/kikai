@@ -16,12 +16,24 @@ const store = proxy<TrafficLightState>({
 // Define states and transitions
 $.red.allows = $.yellow
 $.yellow.allows = $.green
-$.green.allows = $.yellow
+$.green.allows = $.red
 
 // Add validation
 $.red.validate = (state: TrafficLightState) => state.color === 'red'
 $.yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
 $.green.validate = (state: TrafficLightState) => state.color === 'green'
+
+$.red.on('enter', () => {
+  managedStore.color = 'red'
+})
+
+$.yellow.on('enter', () => {
+  managedStore.color = 'yellow'
+})
+
+$.green.on('enter', () => {
+  managedStore.color = 'green'
+})
 
 // Wrap store with our state machine
 const managedStore = $(store)
@@ -34,14 +46,11 @@ export default function TrafficLight() {
     // Set up automatic transitions
     const interval = setInterval(() => {
       if (snap.color === 'red') {
-        managedStore.color = 'yellow'
         $.yellow()
       } else if (snap.color === 'yellow') {
-        managedStore.color = snap.timeInState > 3000 ? 'red' : 'green'
-        snap.timeInState > 3000 ? $.red() : $.green()
+        $.green()
       } else if (snap.color === 'green') {
-        managedStore.color = 'yellow'
-        $.yellow()
+        $.red()
       }
     }, 1000)
 
