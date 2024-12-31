@@ -14,6 +14,14 @@ const store = proxy<TrafficLightState>({
 })
 
 const managedStore = $(store)
+const green = $.green({
+  allows: yellow,
+  on: {
+    enter: () => {
+      managedStore.color = 'green'
+    }
+  }
+})
 
 const red = $.red({
   allows: yellow,
@@ -24,28 +32,36 @@ const red = $.red({
     }
   }
 })
-const yellow = $.yellow
-const green = $.green
 
-red.allows = yellow
-yellow.allows = green
-green.allows = red
-
-red.validate = (state: TrafficLightState) => state.color === 'red'
-yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
-green.validate = (state: TrafficLightState) => state.color === 'green'
-
-$.red.on('enter', () => {
-  managedStore.color = 'red'
+const yellow = $.yellow({
+  allows: red,
+  validate: (state: TrafficLightState) => state.color === 'yellow',
+  on: {
+    enter: () => {
+      managedStore.color = 'yellow'
+    }
+  }
 })
 
-$.yellow.on('enter', () => {
-  managedStore.color = 'yellow'
-})
+// red.allows = yellow
+// yellow.allows = green
+// green.allows = red
 
-$.green.on('enter', () => {
-  managedStore.color = 'green'
-})
+// red.validate = (state: TrafficLightState) => state.color === 'red'
+// yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
+// green.validate = (state: TrafficLightState) => state.color === 'green'
+
+// $.red.on('enter', () => {
+//   managedStore.color = 'red'
+// })
+
+// $.yellow.on('enter', () => {
+//   managedStore.color = 'yellow'
+// })
+
+// $.green.on('enter', () => {
+//   managedStore.color = 'green'
+// })
 
 // Create the component
 export default function TrafficLight() {

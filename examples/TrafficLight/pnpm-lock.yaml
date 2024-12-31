@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       kikai:
-        specifier: ^0.1.19
-        version: 0.1.19(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^0.1.20
+        version: 0.1.20(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -963,8 +963,8 @@ packages:
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
-  kikai@0.1.19:
-    resolution: {integrity: sha512-LK2juao5xHwOG6EsocLmWTbrOQgx8MW5AUuECmMUVFoVJAsmUMmBzC/c5a41EuaJ2ZZGPlvD/sJsxC1VvwlQ6w==}
+  kikai@0.1.20:
+    resolution: {integrity: sha512-IGYwcYLApsbhKZBkvPVHkG3l1yiuRBqfivEy6UHKskFY5BH8A5dr4ABkOYsEyj3WekPKfmTFavt3MTbuj5oS8A==}
     peerDependencies:
       react: ^18.3.1
       react-dom: ^18.3.1
@@ -2266,7 +2266,7 @@ snapshots:
     dependencies:
       json-buffer: 3.0.1
 
-  kikai@0.1.19(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  kikai@0.1.20(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       jotai: 2.11.0(@types/react@18.3.18)(react@18.3.1)
       nanoid: 5.0.9
