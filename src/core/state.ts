@@ -15,6 +15,44 @@ const getNextFlag = () => {
 
 const stateHandlers = new WeakMap<StateNode, StateHandler>()
 
+// Create a function as the base
+const stateGetterBase = function (store: any) {} as StateGetter
+
+Object.defineProperty(stateGetterBase, 'configure', {
+  enumerable: false,
+  value: (overrides: Partial<Config>) => {
+    const currentOverrides = configOverrides.get($)
+    configOverrides.set($, { ...currentOverrides, ...overrides })
+  }
+})
+
+export const $ = new Proxy(stateGetterBase, {
+  get(target, prop: string | symbol): StateNode {
+    if (typeof prop === 'symbol') return undefined as any
+    return createState(prop)
+  },
+  apply(target, thisArg, [store]: [object]): object {
+    const metadata = stateMetadata.get($)!
+    const prevState = metadata.currentState
+
+    const handler =
+      prevState !== NO_STATE && stateHandlers.has(prevState)
+        ? stateHandlers.get(prevState)!
+        : metadata.handler
+
+    if (!handler) {
+      throw new Error(
+        'No state handler set. Did you forget to call $({ handler: <handler>})?'
+      )
+    }
+
+    return handler(store, {
+      validate: prevState !== NO_STATE ? prevState.validate : undefined,
+      currentState: prevState
+    })
+  }
+})
+
 export const stateMetadata = new WeakMap<
   typeof $,
   {
@@ -76,44 +114,6 @@ function createState(stateName: string): StateNode {
   }
   return states.get(stateName)!
 }
-
-// Create a function as the base
-const stateGetterBase = function (store: any) {} as StateGetter
-
-Object.defineProperty(stateGetterBase, 'configure', {
-  enumerable: false,
-  value: (overrides: Partial<Config>) => {
-    const currentOverrides = configOverrides.get($)
-    configOverrides.set($, { ...currentOverrides, ...overrides })
-  }
-})
-
-export const $ = new Proxy(stateGetterBase, {
-  get(target, prop: string | symbol): StateNode {
-    if (typeof prop === 'symbol') return undefined as any
-    return createState(prop)
-  },
-  apply(target, thisArg, [store]: [object]): object {
-    const metadata = stateMetadata.get($)!
-    const prevState = metadata.currentState
-
-    const handler =
-      prevState !== NO_STATE && stateHandlers.has(prevState)
-        ? stateHandlers.get(prevState)!
-        : metadata.handler
-
-    if (!handler) {
-      throw new Error(
-        'No state handler set. Did you forget to call $({ handler: <handler>})?'
-      )
-    }
-
-    return handler(store, {
-      validate: prevState !== NO_STATE ? prevState.validate : undefined,
-      currentState: prevState
-    })
-  }
-})
 
 // Initialize metadata
 stateMetadata.set($, {
