@@ -1,6 +1,6 @@
 {
   "name": "kikai",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Simple state machines",
   "author": "Michael Sweeney <overthemike@gmail.com>",
   "homepage": "https://github.com/overthemike/kikai",
