@@ -1,4 +1,4 @@
-import type { StateGetter } from '@/types/state'
+import type { StateGetter } from '../types/state'
 
 export const machine = new Proxy(
   {},

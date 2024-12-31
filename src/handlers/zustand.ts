@@ -1,5 +1,5 @@
-import { StateHandler } from '@/types/config'
-import { NO_STATE } from '@/types/state'
+import { StateHandler } from '../types/config'
+import { NO_STATE } from '../types/state'
 
 export const zustandHandler: StateHandler = (store, options) => {
   const original = store.setState

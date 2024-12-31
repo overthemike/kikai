@@ -1,4 +1,4 @@
-import { type StateNode, NO_STATE } from '@/types/state'
+import { type StateNode, NO_STATE } from './state'
 
 export type StateHandler<OriginalStore = any, ManagedStore = any> = (
   store: OriginalStore,

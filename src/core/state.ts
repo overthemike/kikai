@@ -1,8 +1,8 @@
-import { NO_STATE, StateNode, StateGetter } from '@/types/state'
-import { StateHandler, Config } from '@/types/config'
-import { EventInfo } from '@/types/event'
-import { runEventHandlers } from '@/core/event'
-import { configOverrides } from '@/core/config'
+import { NO_STATE, StateNode, StateGetter } from '../types/state'
+import { StateHandler, Config } from '../types/config'
+import { EventInfo } from '../types/event'
+import { runEventHandlers } from './event'
+import { configOverrides } from './config'
 
 const states = new Map<string, StateNode>()
 let currentFlag = 1n

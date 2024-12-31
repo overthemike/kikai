@@ -1,10 +1,10 @@
-import type { StateNode } from '@/types/state'
+import type { StateNode } from '../types/state'
 import type {
   EventHandler,
   EventOptions,
   EventResult,
   EventInfo
-} from '@/types/event'
+} from '../types/event'
 
 export async function runEventHandlers(
   handlers: Set<{ handler: EventHandler; options: EventOptions }>,

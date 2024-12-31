@@ -1,5 +1,5 @@
-import type { StateHandler } from '@/types/config'
-import type { EventHandler, EventOptions } from '@/types/event'
+import type { StateHandler } from './config'
+import type { EventHandler, EventOptions } from './event'
 
 export const NO_STATE = Symbol('no state')
 

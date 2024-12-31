@@ -1,5 +1,5 @@
-import { StateHandler } from '@/types/config'
-import { NO_STATE } from '@/types/state'
+import { StateHandler } from '../types/config'
+import { NO_STATE } from '../types/state'
 
 export const valtioHandler: StateHandler<object, object> = (store, options) => {
   return new Proxy(store, {

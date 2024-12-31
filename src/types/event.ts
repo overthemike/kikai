@@ -1,4 +1,4 @@
-import { NO_STATE } from '@/types/state'
+import { NO_STATE } from './state'
 
 export type EventInfo = {
   state: string
