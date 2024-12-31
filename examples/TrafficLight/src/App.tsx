@@ -14,8 +14,9 @@ const store = proxy<TrafficLightState>({
 })
 
 const managedStore = $(store)
-const green = $.green({
-  allows: yellow,
+
+$.green({
+  allows: $.red,
   on: {
     enter: () => {
       managedStore.color = 'green'
@@ -23,8 +24,8 @@ const green = $.green({
   }
 })
 
-const red = $.red({
-  allows: yellow,
+$.red({
+  allows: $.yellow,
   validate: (state: TrafficLightState) => state.color === 'red',
   on: {
     enter: () => {
@@ -33,8 +34,8 @@ const red = $.red({
   }
 })
 
-const yellow = $.yellow({
-  allows: red,
+$.yellow({
+  allows: $.green,
   validate: (state: TrafficLightState) => state.color === 'yellow',
   on: {
     enter: () => {
