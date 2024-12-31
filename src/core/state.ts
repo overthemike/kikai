@@ -14,6 +14,8 @@ const getNextFlag = () => {
   return flag
 }
 
+const stateHandlers = new WeakMap<StateNode | StateGetter, StateHandler>()
+
 // Create a function as the base
 const stateGetterBase = function (store: any) {} as StateGetter
 
@@ -39,7 +41,7 @@ export const $ = new Proxy(stateGetterBase, {
     const prevState = metadata.currentState
 
     const handler =
-      prevState !== NO_STATE && stateHandlers.has(prevState)
+      prevState !== NO_STATE && prevState.use
         ? stateHandlers.get(prevState)!
         : getConfig('stateHandler')
 
@@ -133,5 +135,6 @@ export const defaultConfig: Config = {
   stateHandler: valtioHandler
 }
 
-const stateHandlers = new WeakMap<StateNode | StateGetter, StateHandler>()
-stateHandlers.set($, getConfig('stateHandler') || valtioHandler)
+configOverrides.set($, {
+  stateHandler: getConfig('stateHandler')
+})
