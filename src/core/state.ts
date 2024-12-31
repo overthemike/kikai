@@ -14,6 +14,16 @@ const getNextFlag = () => {
   return flag
 }
 
+export const defaultConfig: Config = {
+  generateId: nanoid,
+  stateHandler: valtioHandler
+}
+
+export function getConfig<K extends keyof Config>(key: K): Config[K] {
+  const overrides = configOverrides.get($)!
+  return overrides[key] ?? defaultConfig[key]
+}
+
 const stateHandlers = new WeakMap<StateNode | StateGetter, StateHandler>()
 
 // Create a function as the base
@@ -119,22 +129,10 @@ function createState(stateName: string): StateNode {
   return states.get(stateName)!
 }
 
-export function getConfig<K extends keyof Config>(key: K): Config[K] {
-  const overrides = configOverrides.get($)!
-  return overrides[key] ?? defaultConfig[key]
-}
-
 stateMetadata.set($, {
   currentState: NO_STATE
 })
 
 export const configOverrides = new WeakMap<object, Partial<Config>>()
 
-export const defaultConfig: Config = {
-  generateId: nanoid,
-  stateHandler: valtioHandler
-}
-
-configOverrides.set($, {
-  stateHandler: getConfig('stateHandler')
-})
+configOverrides.set($, {})
