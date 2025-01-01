@@ -1,4 +1,5 @@
 export { $ } from './core/state'
+export { machine } from './core/machine'
 export { valtioHandler } from './handlers/valtio'
 export { jotaiHandler } from './handlers/jotai'
 export { zustandHandler } from './handlers/zustand'
