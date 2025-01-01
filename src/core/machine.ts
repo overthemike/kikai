@@ -16,7 +16,7 @@ type MachineGetter = {
 // Store handlers directly
 export const machineHandlers = new WeakMap<Machine, StateHandler>()
 
-const machine = new Proxy({} as MachineGetter, {
+export const machine = new Proxy({} as MachineGetter, {
   get(target, prop: string) {
     const states = new Proxy({} as Machine, {
       get(target, prop: string) {
