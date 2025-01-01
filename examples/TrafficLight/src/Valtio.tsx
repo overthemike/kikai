@@ -1,69 +1,57 @@
 import React from 'react'
 import { proxy, useSnapshot } from 'valtio'
-import { $ } from 'kikai'
-// import { valtioHandler } from 'kikai'
+import { valtioHandler, machine} from 'kikai'
 
-type TrafficLightState = {
-  color: 'red' | 'yellow' | 'green'
-  timeInState: number
-}
-// Our state machine
-const store = proxy<TrafficLightState>({
-  color: 'red',
-  timeInState: 0
-})
 
-const managedStore = $(store)
+machine.trafficLight = states => {
+  type TrafficLightState = {
+    color: 'red' | 'yellow' | 'green'
+    timeInState: number
+  }
+  // Our state machine
+  const store = proxy<TrafficLightState>({
+    color: 'red',
+    timeInState: 0
+  })
 
-const green = $.green({
-  allows: $.red,
-  on: {
-    enter: () => {
-      managedStore.color = 'green'
+  const green = $.green({
+    allows: $.red,
+    on: {
+      enter: () => {
+        managedStore.color = 'green'
+      }
     }
+  })
+
+  const red = $.red({
+    allows: $.yellow,
+    validate: (state: TrafficLightState) => state.color === 'red',
+    on: {
+      enter: () => {
+        managedStore.color = 'red'
+      }
+    }
+  })
+
+  const yellow = $.yellow({
+    allows: $.green,
+    validate: (state: TrafficLightState) => state.color === 'yellow',
+    on: {
+      enter: () => {
+        managedStore.color = 'yellow'
+      }
+    }
+  })
+
+  return {
+    yellow,
+    red,
+    green
   }
 })
 
-const red = $.red({
-  allows: $.yellow,
-  validate: (state: TrafficLightState) => state.color === 'red',
-  on: {
-    enter: () => {
-      managedStore.color = 'red'
-    }
-  }
-})
 
-const yellow = $.yellow({
-  allows: $.green,
-  validate: (state: TrafficLightState) => state.color === 'yellow',
-  on: {
-    enter: () => {
-      managedStore.color = 'yellow'
-    }
-  }
-})
-
-// red.allows = yellow
-// yellow.allows = green
-// green.allows = red
-
-// red.validate = (state: TrafficLightState) => state.color === 'red'
-// yellow.validate = (state: TrafficLightState) => state.color === 'yellow'
-// green.validate = (state: TrafficLightState) => state.color === 'green'
-
-// $.red.on('enter', () => {
-//   managedStore.color = 'red'
-// })
-
-// $.yellow.on('enter', () => {
-//   managedStore.color = 'yellow'
-// })
-
-// $.green.on('enter', () => {
-//   managedStore.color = 'green'
-// })
-
+const { yellow, red, green } = trafficLight
 // Create the component
 export default function TrafficLight() {
   const snap = useSnapshot(store)

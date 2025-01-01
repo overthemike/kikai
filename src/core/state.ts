@@ -4,6 +4,7 @@ import { EventInfo } from '../types/event'
 import { runEventHandlers } from './event'
 import { nanoid } from 'nanoid'
 import { valtioHandler } from '../handlers/valtio'
+import { machineHandlers } from '../core/machine'
 
 const states = new Map<string, StateNode>()
 let currentFlag = 1n
@@ -51,8 +52,9 @@ export const $ = new Proxy(stateGetterBase, {
     const prevState = metadata.currentState
 
     const handler =
-      prevState !== NO_STATE && prevState.use
-        ? stateHandlers.get(prevState)!
+      prevState !== NO_STATE
+        ? (stateHandlers.get(prevState) ?? // State-specific handler
+          getConfig('stateHandler')) // Global handler
         : getConfig('stateHandler')
 
     if (!handler) {
@@ -75,7 +77,7 @@ export const stateMetadata = new WeakMap<
   }
 >()
 
-function createState(stateName: string): StateNode {
+export function createState(stateName: string): StateNode {
   if (!states.has(stateName)) {
     const flag = getNextFlag()
 
