@@ -1,19 +1,20 @@
-import { StateNode, NO_STATE } from '../types/state'
+import { StateNode, StateGetter, NO_STATE } from '../types/state'
 import { StateHandler } from '../types/config'
 import { createState, getConfig } from '../core/state'
 
-type Machine = {
+export type Machine = {
   use: (handler: StateHandler) => void
   apply: (store: any) => any
 } & {
   [key: string]: StateNode
 }
 
-type MachineGetter = {
-  [key: string]: Machine
+export type MachineGetter = {
+  [key: string]: Machine & {
+    states: StateGetter
+  }
 }
 
-// Store handlers directly
 export const machineHandlers = new WeakMap<Machine, StateHandler>()
 
 export const machine = new Proxy({} as MachineGetter, {
@@ -26,7 +27,7 @@ export const machine = new Proxy({} as MachineGetter, {
           }
         }
         if (prop === 'apply') {
-          return (store: any) => {
+          return function (store: any) {
             const handler =
               machineHandlers.get(states) ?? getConfig('stateHandler')
             if (!handler) {
