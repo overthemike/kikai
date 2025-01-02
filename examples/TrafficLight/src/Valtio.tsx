@@ -1,8 +1,10 @@
 import React from 'react'
 import { proxy, useSnapshot } from 'valtio'
-import { valtioHandler, machine } from 'kikai'
+import { valtioHandler, machine, manageWith } from 'kikai'
 
-machine.trafficLight = (states, valtioHandler) => {
+machine.trafficLight = (states) => {
+  manageWith(valtioHandler)
+
   type TrafficLightState = {
     color: 'red' | 'yellow' | 'green'
     timeInState: number
