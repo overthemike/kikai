@@ -5,9 +5,7 @@ import { createState, getConfig } from '../core/state'
 export const machineHandlers = new WeakMap<Machine, StateHandler>()
 
 type Machine = {
-  use: (handler: StateHandler) => void
   apply: (store: any) => any
-  configure: (config: Partial<Config>) => void
   (states: StateGetter): any
 } & {
   [key: string]: StateNode
@@ -31,23 +29,18 @@ export function manageWith(stateManager: StateHandler) {
 
 export const machine = new Proxy({} as MachineGetter, {
   get(target, prop: string) {
-    const states = new Proxy(
-      {
-        configure: (config: Partial<Config>) => {
-          // Handle configuration
-        }
-      } as Machine,
-      {
+    if (!target[prop]) {
+      target[prop] = new Proxy({} as Machine, {
         get(target, prop: string) {
           if (prop === 'use') {
             return (handler: StateHandler) => {
-              machineHandlers.set(states, handler)
+              machineHandlers.set(target, handler)
             }
           }
           if (prop === 'apply') {
             return function (store: any) {
               const handler =
-                machineHandlers.get(states) ?? getConfig('stateHandler')
+                machineHandlers.get(target) ?? getConfig('stateHandler')
               if (!handler) {
                 throw new Error('No state handler set')
               }
@@ -56,14 +49,17 @@ export const machine = new Proxy({} as MachineGetter, {
           }
           return createState(prop)
         }
-      }
-    )
-
-    return function (callback: (states: StateGetter) => any) {
-      currentMachine = states
-      const result = callback(states)
-      currentMachine = null
-      return result
+      })
     }
+    return target[prop]
+  },
+  set(target, prop: string, value: (states: StateGetter) => any) {
+    const machine = target[prop]
+    if (machine) {
+      currentMachine = machine
+      value(machine)
+      currentMachine = null
+    }
+    return true
   }
 })
