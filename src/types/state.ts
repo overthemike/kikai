@@ -28,7 +28,7 @@ export type StateNode = {
 
 export type StateGetter = {
   (store: any): any
-  configure: (config: Partial<Config>) => void
+  configure?: (config: Partial<Config>) => void
 } & {
   [key: string]: StateNode
 }
