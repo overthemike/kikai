@@ -6,7 +6,6 @@ export const machineHandlers = new WeakMap<Machine, StateHandler>()
 
 type Machine = {
   apply: (store: any) => any
-  configure: (config: Partial<Config>) => void
   (states: StateGetter): any
 } & {
   [key: string]: StateNode
