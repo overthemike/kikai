@@ -2,61 +2,68 @@ import { StateNode, StateGetter, NO_STATE } from '../types/state'
 import { StateHandler, Config } from '../types/config'
 import { createState, getConfig } from '../core/state'
 
+export const machineHandlers = new WeakMap<Machine, StateHandler>()
+
 type Machine = {
   use: (handler: StateHandler) => void
   apply: (store: any) => any
   configure: (config: Partial<Config>) => void
-  (store: any): any
+  (states: StateGetter): any
 } & {
   [key: string]: StateNode
 }
 
-export type MachineGetter = {
-  [key: string]: Machine & {
-    states: StateGetter
-  }
+type MachineGetter = {
+  [key: string]: Machine
 }
 
-export const machineHandlers = new WeakMap<Machine, StateHandler>()
-
+// Track current machine being defined
 let currentMachine: Machine | null = null
 
-export function manageWith(handler: StateHandler) {
+export function manageWith(stateManager: StateHandler) {
   if (!currentMachine) {
-    throw new Error('use() can only be called within a machine definition')
+    throw new Error(
+      'manageWith() can only be called within a machine definition'
+    )
   }
-  machineHandlers.set(currentMachine, handler)
+  machineHandlers.set(currentMachine, stateManager)
 }
 
-export const machine = new Proxy({} as MachineGetter, {
+const machine = new Proxy({} as MachineGetter, {
   get(target, prop: string) {
-    const states = new Proxy({} as Machine, {
-      get(target, prop: string) {
-        if (prop === 'use') {
-          return (handler: StateHandler) => {
-            machineHandlers.set(states, handler)
-          }
+    const states = new Proxy(
+      {
+        configure: (config: Partial<Config>) => {
+          // Handle configuration
         }
-        if (prop === 'apply') {
-          return function (store: any) {
-            const handler =
-              machineHandlers.get(states) ?? getConfig('stateHandler')
-            if (!handler) {
-              throw new Error('No handler set for machine')
+      } as Machine,
+      {
+        get(target, prop: string) {
+          if (prop === 'use') {
+            return (handler: StateHandler) => {
+              machineHandlers.set(states, handler)
             }
-            return handler(store, { currentState: NO_STATE })
           }
+          if (prop === 'apply') {
+            return function (store: any) {
+              const handler =
+                machineHandlers.get(states) ?? getConfig('stateHandler')
+              if (!handler) {
+                throw new Error('No state handler set')
+              }
+              return handler(store, { currentState: NO_STATE })
+            }
+          }
+          return createState(prop)
         }
-        return createState(prop)
       }
-    })
+    )
 
-    // Return function that sets context, runs callback, and cleans up
-    return function (callback: (states: StateGetter) => void) {
+    return function (callback: (states: StateGetter) => any) {
       currentMachine = states
-      const result = callback(states) // Get whatever the callback returns
+      const result = callback(states)
       currentMachine = null
-      return result // Pass through the return value
+      return result
     }
   }
 })
