@@ -1,9 +1,8 @@
 import React from 'react'
 import { proxy, useSnapshot } from 'valtio'
-import { valtioHandler, machine} from 'kikai'
+import { valtioHandler, machine } from 'kikai'
 
-
-machine.trafficLight = states => {
+machine.trafficLight = (states, valtioHandler) => {
   type TrafficLightState = {
     color: 'red' | 'yellow' | 'green'
     timeInState: number
@@ -14,8 +13,10 @@ machine.trafficLight = states => {
     timeInState: 0
   })
 
-  const green = $.green({
-    allows: $.red,
+  const managedStore = states.apply(store)
+
+  const green = states.green({
+    allows: states.red,
     on: {
       enter: () => {
         managedStore.color = 'green'
@@ -23,8 +24,8 @@ machine.trafficLight = states => {
     }
   })
 
-  const red = $.red({
-    allows: $.yellow,
+  const red = states.red({
+    allows: states.yellow,
     validate: (state: TrafficLightState) => state.color === 'red',
     on: {
       enter: () => {
@@ -33,8 +34,8 @@ machine.trafficLight = states => {
     }
   })
 
-  const yellow = $.yellow({
-    allows: $.green,
+  const yellow = states.yellow({
+    allows: states.green,
     validate: (state: TrafficLightState) => state.color === 'yellow',
     on: {
       enter: () => {
@@ -44,12 +45,11 @@ machine.trafficLight = states => {
   })
 
   return {
-    yellow,
     red,
+    yellow,
     green
   }
-})
-
+}
 
 const { yellow, red, green } = trafficLight
 // Create the component

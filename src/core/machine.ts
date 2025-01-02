@@ -1,10 +1,12 @@
 import { StateNode, StateGetter, NO_STATE } from '../types/state'
-import { StateHandler } from '../types/config'
+import { StateHandler, Config } from '../types/config'
 import { createState, getConfig } from '../core/state'
 
-export type Machine = {
+type Machine = {
   use: (handler: StateHandler) => void
   apply: (store: any) => any
+  configure: (config: Partial<Config>) => void
+  (store: any): any
 } & {
   [key: string]: StateNode
 }
@@ -16,6 +18,15 @@ export type MachineGetter = {
 }
 
 export const machineHandlers = new WeakMap<Machine, StateHandler>()
+
+let currentMachine: Machine | null = null
+
+export function manageWith(handler: StateHandler) {
+  if (!currentMachine) {
+    throw new Error('use() can only be called within a machine definition')
+  }
+  machineHandlers.set(currentMachine, handler)
+}
 
 export const machine = new Proxy({} as MachineGetter, {
   get(target, prop: string) {
@@ -39,6 +50,13 @@ export const machine = new Proxy({} as MachineGetter, {
         return createState(prop)
       }
     })
-    return states
+
+    // Return function that sets context, runs callback, and cleans up
+    return function (callback: (states: StateGetter) => void) {
+      currentMachine = states
+      const result = callback(states) // Get whatever the callback returns
+      currentMachine = null
+      return result // Pass through the return value
+    }
   }
 })
