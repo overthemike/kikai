@@ -29,7 +29,7 @@ export function manageWith(stateManager: StateHandler) {
   machineHandlers.set(currentMachine, stateManager)
 }
 
-const machine = new Proxy({} as MachineGetter, {
+export const machine = new Proxy({} as MachineGetter, {
   get(target, prop: string) {
     const states = new Proxy(
       {
