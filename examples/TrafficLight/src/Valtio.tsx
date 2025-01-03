@@ -17,7 +17,7 @@ machine.trafficLight = (states) => {
 
   const managedStore = states.apply(store)
 
-  const green = states.green({
+  states.green({
     allows: states.red,
     on: {
       enter: () => {
@@ -26,7 +26,7 @@ machine.trafficLight = (states) => {
     }
   })
 
-  const red = states.red({
+  states.red({
     allows: states.yellow,
     validate: (state: TrafficLightState) => state.color === 'red',
     on: {
@@ -36,7 +36,7 @@ machine.trafficLight = (states) => {
     }
   })
 
-  const yellow = states.yellow({
+  states.yellow({
     allows: states.green,
     validate: (state: TrafficLightState) => state.color === 'yellow',
     on: {
@@ -45,15 +45,9 @@ machine.trafficLight = (states) => {
       }
     }
   })
-
-  return {
-    red,
-    yellow,
-    green
-  }
 }
 
-const { yellow, red, green } = trafficLight
+const { yellow, red, green } = machine.trafficLight
 // Create the component
 export default function TrafficLight() {
   const snap = useSnapshot(store)
